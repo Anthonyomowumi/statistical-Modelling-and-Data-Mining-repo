@@ -17,10 +17,13 @@ The dataset was obtained from the National Institute of Diabetes and Digestive a
 
 
 ## II. Data Preprocessing and Transformation
-  a) Data cleaning: 
-  b) Missing Data Imputation using missForest imputation
-  c) Descriptive and Graphical Analysis after Missing Value Imputation; this involve checking the data distribution using kurtosis and skewness of the dataset. 
+  a) Data cleaning: Errors, special characters like "Inf" and "NaN," as well as non-negative values, were checked for by developing a check rule. The presence of outliers was visualized using boxplot
+  ![image](https://github.com/Anthonyomowumi/statistical-Modelling-and-Data-Mining-repo/assets/93340041/e8abbef8-7004-4274-9abc-d68a8ffd7e03)
+
+  b) Missing Data Imputation using missForest imputation: 652 missing was imputed using missForest imputation
   
+  c) Descriptive and Graphical Analysis after Missing Value Imputation; this involve checking the data distribution using kurtosis and skewness of the dataset. 
+  d) Correlation and Variance Factor was used to check for multicollinearity in the data features
 
 The dataset was analysed in this study using the R programming language.
 
