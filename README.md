@@ -55,6 +55,6 @@ The dataset was split into a 70:30 ratio and a Two Random Forest model was built
 ![image](https://github.com/Anthonyomowumi/statistical-Modelling-and-Data-Mining-repo/assets/93340041/1986d4c6-7e2b-482a-80b6-4b1818436b5e)
 
 
-## V.COMCLUSION
+## V.CONCLUSION
 It  was inferred from the outcomes of the various statistical analyses performed on the dataset indicates that all independent variables (8 features) from the original dataset are crucial for the prediction of Diabetes in women. Although It is suggested that further analysis should be conducted to ascertain the 4 statistically significant importance probably by using statistical controls and other methods. Also, the analysis's use of statistical and data mining tools was successful in reaching the study's objective as the conclusion was reached based on this study that the 8 features are necessary for the prediction of Diabetes Mellitus in Women. 
 
