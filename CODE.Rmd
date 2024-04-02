@@ -1,0 +1,501 @@
+---
+title: "A Study Adopting Statistical and Data Mining Approach to Draw Inferences on Diabetes Mellitus in Women - A Case Study on Diabetes and Women"
+name: "Anthony Omowumi"
+BNumber: "B00892305" 
+CourseWork: "Statistical Modelling and Data Mining - COM740" 
+output:
+  html_document: default
+  word_document: default
+date: "2023-03-04"
+---
+```{r}
+options(knitr.duplicate.label = "allow")
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#1.0 Loading the necessary Libraries for data mining task
+
+```{r}
+library(dplyr)
+library(editrules)
+library(ggplot2)
+library(corrplot)
+library (class)
+library(tidyr)
+library(summarytools)
+library(Hmisc)
+library(corrplot)
+library(missForest)
+library(PerformanceAnalytics)
+library(moments)
+library(tidyverse)
+library("HistogramTools")
+library(psych)
+library(smotefamily)
+library(caret)
+library(MLmetrics)
+library(caTools)
+library(randomForest)
+```
+
+#1.1. Importing the dataset into R as Diabetes_1
+
+```{r}
+Diabetes_1<- read.csv("diabetes.csv", header=T, stringsAsFactors =F)
+Diabetes_1<- Diabetes_1[1:9]
+```
+
+#1.2. Performing the Descriptive statistics about the data
+
+```{r}
+View(Diabetes_1) #To open and view the dataset in a dataframe format opening as a table
+names(Diabetes_1) #To check for column names
+str(Diabetes_1) #To check the structure of the dataset
+sapply(Diabetes_1, class) #Viewing the column names and datatypes
+dim(Diabetes_1) #To view the number of rows and columns present in the dataset
+
+
+descr(Diabetes_1,
+      headings = T,         #T means True which is to include the headings
+      stats = "fivenum",    #minimum, 1st quartile, median, 3rd quartile and maximum of the dataset
+      transpose = T
+      ) 
+
+descr(Diabetes_1,
+      headings = T,               #T means to include the headings
+      stats = c("mean", "sd"),    #To include the mean and standard deviation of each columns in the dataset
+      transpose = T
+)
+```
+
+
+#2.0. Performing Data pre-processing steps to clean raw data and storing into a new dataframe to maintain the history of the data(Data Provenance)
+
+```{r}
+Diabetes_2 <- Diabetes_1 #Storing the dataset in a new variable to maintain the Data Provenance
+str(Diabetes_2) #Confirming the structure before further analysis is performed on it
+```
+
+#2.1. Checking if errors, missing values, special characters and outliers are present in the dataset if any
+
+```{r}
+#Creating rule to identify violations in the dataset.
+(E <- editset(c("Glucose >=0", "BloodPressure >=0", "SkinThickness >= 0", "Insulin >= 0", "BMI >= 0", "DiabetesPedigreeFunction >= 0", "Age >= 0" ))) #Checking for data consistency and data must non-negative values.
+
+ve <- violatedEdits(E, Diabetes_2, method = "mip")
+summary(ve) #It is observed from the summary of violatedEdits that there are no negative values in the dataset. All the zero values are evaluated as NA/NULL
+
+#Identifying special values in the dataset
+is.finite(c(Inf, NaN)) #checking for Special values (Inf, NA and NaN) and correcting it.
+is.special <- function(x){
+  if (is.numeric(x)) !is.finite(x) else is.na(x)
+} #function to define special characters.
+
+sapply(Diabetes_2, is.special)  #Special character detection in the dataset.
+Diabetes_2[mapply(is.special, Diabetes_2)] <- NA #Applying NA to any special characters if present.
+
+
+#Inspecting the total numbers of NA in the dataset
+sum(is.na(Diabetes_2[1:8]))
+
+#Showing the outliers using boxplot.
+Boxplot_Outliers_Detection <- subset(Diabetes_2, select = -c(Outcome))
+boxplot(Boxplot_Outliers_Detection,cex.axis=.3, col="purple",horiz=F, dotplot=FALSE)
+```
+
+#3.0. Missing Values in imputation
+
+#A random forest algorithm implementation is called missForest. It is a non-parametric imputation technique that works with different kinds of variables. This technique was use for the Missing value implementation [18]
+```{r}
+#Imputing the missing values using missForest, an implementation of Random Forest Algorithm
+
+#install.packages("missForest")
+#library(missForest)
+
+Diabetes <- Diabetes_2 #Storing the dataset in a new variable
+str(Diabetes)
+
+set.seed(1) #To allow for reproducibility of the same imputation anytime done
+Diabetes <- missForest(Diabetes[1:9], verbose = T) #Performing imputation on the missing values columns
+
+#Checking Imputed values
+summary(Diabetes$ximp) #Giving a statistical summary of the dataset
+
+#Checking Imputation error
+Diabetes$OOBerror #This evaluates the performance of the algorithm on the dataset. The huge error value probably this is due to higher number of missing data in the dataset.
+
+sum(is.na(Diabetes$ximp)) #Checking if there is NA values after the imputation has been done
+str(Diabetes$ximp) #Checking for the structure after Imputation to replace the missing values.
+
+
+View(Diabetes$ximp)
+dim(Diabetes$ximp)
+```
+
+#3.1. Using Histrogram to check the distribution of the data columns
+```{r}
+
+par(mfrow=c(1,3))
+hist(Diabetes$ximp$Glucose, breaks=10, col = "gray", border = "white")
+hist(Diabetes$ximp$Insulin, breaks=10, col = "gray", border = "white")
+hist(Diabetes$ximp$BloodPressure, breaks=10, col = "gray", border = "white")
+
+
+par(mfrow=c(1,3))
+hist(Diabetes$ximp$SkinThickness, breaks=10, col = "gray", border = "white")
+hist(Diabetes$ximp$BMI, breaks=10, col = "gray", border = "white")
+hist(Diabetes$ximp$Age, breaks=10, col = "gray", border = "white")
+
+par(mfrow=c(1,2))
+hist(Diabetes$ximp$Pregnancies, breaks=10, col = "gray", border = "white")
+hist(Diabetes$ximp$DiabetesPedigreeFunction, breaks=10, col = "gray", border = "white")
+#The distribution of the data is mostly Unimodal because it has a single peak and it is skewed to the right. 
+
+
+#Checking for the distrubution of the data if it is a normal distribution or no using Shapiro wilk Test
+shapiro.test(Diabetes$ximp$Pregnancies) #This shows  w= 0.90428, p-value is <2.2e-16
+shapiro.test(Diabetes$ximp$Glucose) #w = 0.96969, p-value is 1.58e-11
+shapiro.test(Diabetes$ximp$BloodPressure) #w = 0.98947, p-value is2.575e-05
+shapiro.test(Diabetes$ximp$SkinThickness) #w = 0.97122, p-value is 3.712e-11
+shapiro.test(Diabetes$ximp$Insulin) #w = 0.84403, p-value is <2.2e-16
+shapiro.test(Diabetes$ximp$BMI) #w = 0.97886, p-value is 4.3e-09
+shapiro.test(Diabetes$ximp$DiabetesPedigreeFunction) #W = 0.83652, p-value < 2.2e-16
+shapiro.test(Diabetes$ximp$Age) #W = 0.87477, p-value < 2.2e-16
+
+#The conclusion from the normality test done using shapiro wilk test, setting a cut off of p-value = 0.05, all the attribute above gave a p-value lowered than 0.05, this therefore means, the attributes deviates from Normality. The chances that the attributes are from normal distribution is low.
+
+```
+
+#3.2. Checking for the skewness, Kurtosis and Correlation after the Imputation to be able to study the distribution of the dataset.
+```{r}
+#Checking for the skewness after missing values imputation
+skewness(Diabetes$ximp$Pregnancies) #skewness for Pregnanies column is 0.8999119 
+skewness(Diabetes$ximp$Glucose) #skewness for Glucose column is 0.5310318
+skewness(Diabetes$ximp$BloodPressure) #skewness for Blood pressure is 0.1412483
+skewness(Diabetes$ximp$SkinThickness) #skewness for Skin Thickness is 0.7041318
+skewness(Diabetes$ximp$Insulin) #skewness for Insulin is 2.118097
+skewness(Diabetes$ximp$BMI) #skewness for BMI is 0.609032
+skewness(Diabetes$ximp$DiabetesPedigreeFunction) #skewness for DiabetesPedigreeFunction is 1.916159
+skewness(Diabetes$ximp$Age) #skewness for Age is 1.127389
+
+
+
+#Checking for Tailnessin the data distribution 
+kurtosis(Diabetes$ximp$Pregnancies) #kurtosis for pregnancies is 3.15038
+kurtosis(Diabetes$ximp$Glucose) #kurtosis for Glucose is 2.721845
+kurtosis(Diabetes$ximp$BloodPressure) #Kurtosis for Blood Pressure is 3.9962
+kurtosis(Diabetes$ximp$SkinThickness) #kurtosis for Skin Thickness is 6.394647
+kurtosis(Diabetes$ximp$Insulin) #Kurtosis for Insulin is 10.74959
+kurtosis(Diabetes$ximp$BMI) #kurtosis for BMI is 3.882344
+kurtosis(Diabetes$ximp$DiabetesPedigreeFunction) #kurtosis for DiabetesPedigreeFunction is 8.550792
+kurtosis(Diabetes$ximp$Age) #Kurtosis for Age is 3.631177
+
+
+
+# Create correlation matrix
+#install.packages("ggally") Spearman was chosen as the method for correlation because the data is not normally distributed as computed from the shapiro wilk's test.
+
+library(GGally)
+ggpairs(Diabetes$ximp, 1:9, upper = list(continuous = wrap('cor', method = "spearman")),
+        lower = list(continuous = 'cor')) #This plot shows that Age and Pregnancies has a moderate correlation with each other (0.607), Glucose and Insulin (0.739) has a strong correlation , Skinthickness and BMI (0.740) has a strong correlation. 
+
+
+#Using the Variance Inflation Factor (VIF) to further confirm if Multicollinearity exists
+library(car) #Loading Library
+Diabetes_model <- lm(Diabetes$ximp$Outcome ~ Diabetes$ximp$Pregnancies + Diabetes$ximp$Glucose + Diabetes$ximp$BloodPressure + Diabetes$ximp$SkinThickness + Diabetes$ximp$Insulin + Diabetes$ximp$BMI + Diabetes$ximp$DiabetesPedigreeFunction + Diabetes$ximp$Age, Diabetes$ximp)
+
+vif(Diabetes_model) # None of the features shows VIF greater than 5 but between 1 and 2.11, showing it is moderately correlated. 
+
+vifValues <- vif(Diabetes_model) #Creating a vector of the VIF values
+
+barplot(vifValues, main = "VIF Values of all features", horiz = T, col = "gray", border = "white") #create horizontal bar chart to display each VIF value
+abline(v = 5, lwd = 3, lty = 2)#adding a vertical line at 5
+
+#VIF equal to 1 = variables are not correlated
+#VIF between 1 and 5 = variables are moderately correlated 
+#VIF greater than 5  = variables are highly correlate
+#A VIF of three or below is not a cause for concern. As VIF increases, the less reliable your regression results are going to be [14].
+```
+
+#3.3. Boxplot used to draw inferences on the likelihood of People having Diabetes or Not using the different features in the dataset
+```{r}
+#BOXPLOT for BLOODPRESSURE VS OUTCOME
+boxplot(list(Diabetes$ximp$BloodPressure[Diabetes$ximp$Outcome==0], Diabetes$ximp$BloodPressure[Diabetes$ximp$Outcome==1]), col = "gray", xlab="Outcome", ylab="BloodPressure", main="Boxplot for BloodPressure") 
+#There is no much difference between BloodPressure in Outcome 0 and 1 however, it shows people with a bit higher Bloodpressure is at risk of Diabetes.
+```
+
+#3.3a
+```{r}
+#BOXPLOT for SkinThickness VS OUTCOME
+boxplot(list(Diabetes$ximp$SkinThickness[Diabetes$ximp$Outcome==0], Diabetes$ximp$SkinThickness[Diabetes$ximp$Outcome==1]), col = "gray", xlab="Outcome", ylab="SkinThickness", main="Boxplot for SkinThickness") 
+# Shows a chances of that those with higher SkinThickness has a higher chance of having Diabetes as well.
+```
+
+#3.3b
+```{r}
+#BOXPLOT for INSULIN VS OUTCOME
+boxplot(list(Diabetes$ximp$Insulin[Diabetes$ximp$Outcome==0], Diabetes$ximp$Insulin[Diabetes$ximp$Outcome==1]), col = "gray", xlab="Outcome", ylab="Insulin", main="Boxplot for Insulin") #Shows a huge amount of outliers however, Insulin level above 200 shows the higher chance of having diabetes which is inclusive and needs to be inspect more because of the huge amount of Outliers in both outcomes (0/1).
+```
+
+#3.3c
+```{r}
+#BOXPLOT for BMI VS OUTCOME
+boxplot(list(Diabetes$ximp$BMI[Diabetes$ximp$Outcome==0], Diabetes$ximp$BMI[Diabetes$ximp$Outcome==1]),col = "gray" ,xlab="Outcome", ylab="BMI", main="Boxplot for Body Mass Index") # Shows there is chances of having diabetes with increased Body mass index with an exception of some points in the non-diabetic that looks like an outliers.
+```
+
+#3.3d
+```{r}
+#BOXPLOT for DIABETESPEDIGREEFUNCTION VS OUTCOME
+boxplot(list(Diabetes$ximp$DiabetesPedigreeFunction[Diabetes$ximp$Outcome==0], Diabetes$ximp$DiabetesPedigreeFunction[Diabetes$ximp$Outcome==1]),col = "gray", xlab="Outcome", ylab="DiabetesPedigreeFunction", main="Boxplot for DiabetesPedigreeFunction") # Looks like there is little of no diiference between diabetic or non-diabetic outcome based on boxplot. It does not have a huge significance on the diabetic prediction.
+```
+
+#3.3e
+```{r}
+#BOXPLOT for AGE VS OUTCOME
+boxplot(list(Diabetes$ximp$Age[Diabetes$ximp$Outcome==0], Diabetes$ximp$Age[Diabetes$ximp$Outcome==1]),col = "gray", xlab="Outcome", ylab="Age", main="Boxplot for Age") #Shows a chance of having diabetes with higher age, however, considering all other features in the dataset
+```
+
+#3.3f
+```{r}
+#BOXPLOT for PREGNANCIES VS OUTCOME
+boxplot(list(Diabetes$ximp$Pregnancies[Diabetes$ximp$Outcome==0], Diabetes$ximp$Pregnancies[Diabetes$ximp$Outcome==1]),col = "gray",  xlab="Outcome", ylab="Pregnancies", main="Boxplot for Pregnancies") 
+
+
+#IT CAN BE CONCLUDED THAT EVEN THOUGH NEEDS TO BE CHECKED USING STATISTICAL TEST, THAT THE CHANCE OF HAVING DIABETES IS RELATED TO THE INCREASE IN THE FEATURES IN THE DATASET. HOWEVER, THIS WOULD BE CHECK USING LOGISTIC REGRESSION FOR BEST PREDICTORS
+```
+
+#3.4 Scaling the data features using normalization(min/max-scaling)
+```{r}
+# Applying Normalization to the dataset before using it in PCA and Logistics Regression
+Diab_norm <-  Diabetes$ximp %>% mutate(across(c(1:8), ~ (.-min(.)) / (max(.) - min(.))))
+Diab_norm
+
+```
+
+#3.5. Using Principal Component Analysis to visualize the Data points in Low dimensional 2D in order to obeserve patterns better.
+```{r}
+library(tidyverse)
+theme_set(theme_bw(24))
+
+diabpca <- prcomp(Diab_norm, scale=TRUE)
+summary(diabpca) 
+
+
+pca<- prcomp(Diab_norm[1:8], scale=TRUE)
+summary(pca)
+
+
+pca$sdev^2 #This gives the variance explained by each principal component
+sum(pca$sdev^2) #Gives the overall variance by summation which equals to 8 because we have 8 Principal Components
+#The population of variance can be gotten by dividing each PCI standard deviation by the sum of the variance 8, PC1 = 2.6234792/8 = 0.3279349, same as the Proportion of varaince gotten from the summary() function.
+
+#Computing the variance explained by each PCs and storing in a Data frame
+var_explained <- data.frame(PC= paste0("PC",1:8),
+                               var_explained=(pca$sdev)^2/sum((pca$sdev)^2)) 
+head(var_explained)
+
+names(pca) #Getting others components obtained through prcomp() function
+pca$rotation #Rotation gives the principal component loadings.
+
+#According to the result obtained, Approximately all the PC scores is needed in the dataset looking at the Proportion of variance for PC scores. The Cumulative amount of explained variance picking the number of PCAs scores that explained atleast 95% or greater of the Variation is from PC1 to PC7 which means all these components needs to be retain.
+
+var_explained %>%
+  ggplot(aes(x=PC,y=var_explained, group=1))+
+  geom_point(size=4)+
+  geom_line()+
+  labs(title="Scree plot: PCA on scaled data")
+
+var_explained %>%
+  ggplot(aes(x=PC,y=var_explained)) +
+  geom_col()+
+  labs(title="Scree plot: PCA on scaled data")
+
+
+```
+
+#4.0. PERFORMING LOGISTICS REGRESSION TO INSPECT THE VARIABLES
+```{r}
+#Performing Logistics Regression on the Dataset for Classification(Yes/No == 1/0 == Diabetes/Non-diabetes)
+mymodel <- glm(formula =Diab_norm$Outcome ~ Diab_norm$Pregnancies + Diab_norm$Glucose + 
+Diab_norm$BloodPressure + Diab_norm$SkinThickness + Diab_norm$Insulin + Diab_norm$BMI + Diab_norm$DiabetesPedigreeFunction + Diab_norm$Age , family = binomial (link = "logit"), data = Diab_norm)
+summary(mymodel) #The summary shows out of the 8 variables, pregnancies, Glucose, BMI and DiabetesPedigreeFunction are statistcally significant. To inspect the significance more, confounding would be checked for furthermore.
+
+Diab_norm
+#Oddsratio, the probability of an outcome being successful or unsuccessful(Yes/No == 1/0)
+
+mymodel_OR <- exp(mymodel$coefficients[-1]) #the minus 1 is used to get rid of the Intercept.
+mymodel_OR
+
+#logistics.regression.ci.or(Log_model)
+library("MASS")
+mymodel_OR_CI<- exp(cbind(mymodel$coefficients, confint(mymodel)))
+mymodel_OR_CI
+
+
+#Building a model with all statiscally Significant Independent variables.
+mymodel2 <- glm(formula =Diab_norm$Outcome ~ Diab_norm$Pregnancies + Diab_norm$Glucose + Diab_norm$BMI + Diab_norm$DiabetesPedigreeFunction, family = binomial (link = "logit"), data = Diab_norm)
+summary(mymodel2)
+
+anova(mymodel, mymodel2, test = "Chisq") #The result gotten means one is not a better model than the other
+
+
+#The AIC score is used for scoring and selecting the best fitting model for a dataset. Both Models has quite similar AIC score; mymodel with all the 8 Independent variables has 729.01 and mymodel2 has a AIC score of 723.7 which is approximately lower than mymodel, this is shows not much difference in the two models as confirmed by the anova for model comparism to choose the best fitting model.
+```
+
+#4.1. Model Training and testing using Random Forest Classifier Random Forest does not need scaling because it is a tree-based approach instead of distance-method
+```{r}
+#Random Forest Algorithm building
+D3 <- Diabetes$ximp #Saving the unnormalized data into another variable
+D3$Outcome <- as.factor(D3$Outcome) #Coercing the dependent variable into factor
+
+#Checking class distribution before splliting the dataset into Train and Test Dataset
+table(D3$Outcome) # Checking for class size
+prop.table(table(D3$Outcome)) #Outcome 0 is 65% while outcome 1 is 35%
+
+# Splitting the dataset into the Training set and Test set
+# install.packages('caTools')
+
+set.seed(123)
+split = sample.split(D3$Outcome, SplitRatio = 0.7)
+train_D3 = subset(D3, split == TRUE) # It was split into 538 observations for training and, 
+test_D3 = subset(D3, split == FALSE) #230 observations for testing
+train_D3
+test_D3
+
+
+# Train and tune the random forest (rf) algorithm on the training data.
+library(randomForest)
+
+# Find the optimal value of mtry.
+set.seed(123) 
+mtry <- tuneRF(train_D3[-9],train_D3$Outcome, ntreeTry=500,
+               stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1] #Is used to compute the best mtry for RF algorthm
+
+print(mtry) 
+print(best.m) #the value with the mtry with the lowest OOBerrror was chosen which was 2 in this case
+
+#Apply random forest (rf) with the optimal value of mtry.
+set.seed(123)
+rf <-randomForest(Outcome~.,data=train_D3, mtry=best.m, importance=TRUE,ntree=500) #Training the RF with the optimal value of mtry..
+print(rf)
+plot(rf)
+#Evaluate variable importance
+importance(rf)
+varImpPlot(rf)
+
+
+library("caret")
+library(MLmetrics)
+
+Prediction <- predict(rf, newdata = test_D3) #Predicting the Test set results.
+
+cm <- ConfusionMatrix(Prediction, test_D3$Outcome) # Storing the Confusion Matrix
+(Classification.Accuracy <- 100*Accuracy(Prediction, test_D3$Outcome))# Model Accuracy = 75.65%
+l <- table(test_D3$Outcome, Prediction) 
+confusionMatrix(l, mode = "everything")# Recall = 80.13%, Specificity = 66.22%, F1 Score = 81.70%
+
+#Prediction and Calculate Performance Metrics
+pred.1<-predict(rf,newdata = test_D3,type = "prob")
+
+library(ROCR)
+performance <- prediction(pred.1[,2], test_D3$Outcome)
+
+# 0. Accuracy.
+acc<- performance(performance, "acc")
+plot(acc,main="Accurcay Curve for Random Forest",col=3,lwd=4)
+
+# 1. Area under curve
+auc <- performance(performance, "auc")
+auc@y.values[[1]]
+
+# 2. True Positive and Negative Rate
+pred_3 <- performance(performance, "tpr","fpr")
+
+# 3. Plot the ROC curve
+plot(pred_3,main="ROC Curve for Random Forest",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="purple")
+```
+
+#4.2. Random Forest for the two using the statistically significant predictors - Glucose, BMI, Pregnancies and DiabetespedigreeFunction
+```{r}
+#Random Forest Algorithm building
+D4 <-Diabetes$ximp[c(1,2,6,7,9)] #Saving the data into another variable
+#D4
+ 
+D4$Outcome <- as.factor(D4$Outcome) #Coercing the dependent variable into factor
+
+#Checking class distribution before splliting the dataset into Train and Test Dataset
+table(D4$Outcome) # Checking for class size
+prop.table(table(D4$Outcome)) #Outcome 0 is 65% while outcome 1 is 35%
+
+# Splitting the dataset into the Training set and Test set
+# install.packages('caTools')
+
+set.seed(123)
+split = sample.split(D4$Outcome, SplitRatio = 0.7)
+train_D4 = subset(D4, split == TRUE) # It was split into 538 observations for training and, 
+test_D4 = subset(D4, split == FALSE) #230 observations for testing
+train_D4
+test_D4
+
+
+# Train and tune the random forest (rf) algorithm on the training data.
+library(randomForest)
+
+# Find the optimal value of mtry.
+set.seed(123) 
+mtry <- tuneRF(train_D4[-5],train_D4$Outcome, ntreeTry=500,
+               stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1] #Is used to compute the best mtry for RF algorthm
+
+print(mtry) 
+print(best.m) #the value with the mtry with the lowest OOBerrror was chosen which was 2 in this case
+
+#Apply random forest (rf) with the optimal value of mtry.
+set.seed(123)
+rf <-randomForest(Outcome~.,data=train_D4, mtry=best.m, importance=TRUE,ntree=500) #Training the RF with the optimal value of mtry..
+print(rf)
+plot(rf)
+
+#Evaluate variable importance
+importance(rf)
+varImpPlot(rf)
+
+library("caret")
+library(MLmetrics)
+
+Prediction <- predict(rf, newdata = test_D4) #Predicting the Test set results.
+
+cm <- ConfusionMatrix(Prediction, test_D4$Outcome) # Storing the Confusion Matrix
+(Classification.Accuracy <- 100*Accuracy(Prediction, test_D4$Outcome))# Model Accuracy = 71.74%
+f <- table(test_D4$Outcome, Prediction) 
+confusionMatrix(f, mode = "everything")# Recall = 78.15%, Specificity = 59.49%, F1 Score = 78.41%
+
+#Prediction and Calculate Performance Metrics
+pred.2<-predict(rf,newdata = test_D4,type = "prob")
+
+library(ROCR)
+performance <- prediction(pred.2[,2], test_D4$Outcome)
+
+# 0. Accuracy.
+acc<- performance(performance, "acc")
+plot(acc,main="Accurcay Curve for Random Forest",col=3,lwd=4)
+
+# 1. Area under curve
+auc <- performance(performance, "auc")
+auc@y.values[[1]]
+
+# 2. True Positive and Negative Rate
+pred_4 <- performance(performance, "tpr","fpr")
+
+# 3. Plot the ROC curve
+plot(pred_4,main="ROC Curve for Random Forest",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="purple")
+
+
+```
+
+
+
+
