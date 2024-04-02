@@ -47,3 +47,5 @@ This is further studied by using the Variance Inflation Factor (VIF) to confirm 
 
 All the analysis was done using the R programming language and in R studio using R markdown
 
+## III.	STATISTICAL ANALYSIS OF THE INDEPENDENT VARIABLES USING LOGISTICS REGRESSION (LR)
+Two Logistics Regression Model was built to check statistically significant predictors and compared with each other using the ANOVA function. The results of the ANOVA chi-square test pr(>chi) equals 0.611, which shows the p-value for a chi-squared test comparing the two models Since the p-value is higher than 0.05 (the usual significance level), the null hypothesis cannot be rejected and it can be concluded that there is not enough evidence to suggest that the model 1l provides a significantly better fit to the data than model 2.
