@@ -45,5 +45,5 @@ This is further studied by using the Variance Inflation Factor (VIF) to confirm 
 
 
 
-The dataset was analysed in this study using the R programming language.
+All the analysis was done using the R programming language and in R studio using R markdown
 
