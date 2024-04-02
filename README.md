@@ -48,4 +48,13 @@ This is further studied by using the Variance Inflation Factor (VIF) to confirm 
 All the analysis was done using the R programming language and in R studio using R markdown
 
 ## III.	STATISTICAL ANALYSIS OF THE INDEPENDENT VARIABLES USING LOGISTICS REGRESSION (LR)
-Two Logistics Regression Model was built to check statistically significant predictors and compared with each other using the ANOVA function. The results of the ANOVA chi-square test pr(>chi) equals 0.611, which shows the p-value for a chi-squared test comparing the two models Since the p-value is higher than 0.05 (the usual significance level), the null hypothesis cannot be rejected and it can be concluded that there is not enough evidence to suggest that the model 1l provides a significantly better fit to the data than model 2.
+Two Logistics Regression Model was built to check statistically significant predictors and compared with each other using the ANOVA function. The results of the ANOVA chi-square test pr(>chi) equals 0.611, which shows the p-value for a chi-squared test comparing the two models Since the p-value is higher than 0.05 (the usual significance level), the null hypothesis cannot be rejected and it can be concluded that there is not enough evidence to suggest that the model 1 provides a significantly better fit to the data than model 2. So, therefore all the features in the dataset is valuable in the prediction of Diabetes in Female. 
+
+## IV.	MODEL TRAINING AND TESTING USING RANDOM FOREST ALGORITHM
+The dataset was split into a 70:30 ratio and a Two Random Forest model was built, first model was built with the 8 predictors and other with 4 statistically significant predictors while the first model with higher performance was chosen. Accuracy of 76%, Sensitivity of 80%, and Specificity of 66% were used as the metric to evaluate its performance, and the ROC curve was drawn having an AUC score of 82% which means the model is good at predicting the outcomes. 
+![image](https://github.com/Anthonyomowumi/statistical-Modelling-and-Data-Mining-repo/assets/93340041/1986d4c6-7e2b-482a-80b6-4b1818436b5e)
+
+
+## V.COMCLUSION
+It  was inferred from the outcomes of the various statistical analyses performed on the dataset indicates that all independent variables (8 features) from the original dataset are crucial for the prediction of Diabetes in women. Although It is suggested that further analysis should be conducted to ascertain the 4 statistically significant importance probably by using statistical controls and other methods. Also, the analysis's use of statistical and data mining tools was successful in reaching the study's objective as the conclusion was reached based on this study that the 8 features are necessary for the prediction of Diabetes Mellitus in Women. 
+
