@@ -35,7 +35,11 @@ The dataset was obtained from the National Institute of Diabetes and Digestive a
 
  ### d) Correlation and Variance Factor:
  A spearman correlation plot and Variance Inflation Factor was used to check for multicollinearity in the data features. 
+ 
  ![image](https://github.com/Anthonyomowumi/statistical-Modelling-and-Data-Mining-repo/assets/93340041/cdbedfe6-7ea5-4f70-bc26-1fce8b00b184)
+The Spearman correlation plot shows a moderately positive between Age and Pregnancies, a strong correlation between (Insulin and Glucose), and (BMI and Skin Thickness) 
+
+This is further studied by using the Variance Inflation Factor (VIF) to confirm the presence of multicollinearity. VIF determines the strength of multicollinearity between independent variables in a regression model. A VIF equal to 1 means no correlation between predictors while VIF < 5 means low multicollinearity or moderately correlated and VIF > 5 or 10 means high multicollinearity between predictors. None of the 8 features had VIF values larger than 5, as shown by the computed VIF values, implying that none of the features have high multicollinearity with one or more of the variables in a regression model.
 
  ![image](https://github.com/Anthonyomowumi/statistical-Modelling-and-Data-Mining-repo/assets/93340041/b68d9775-6f80-4f6a-8ffb-18d91ef05cc1)
 
